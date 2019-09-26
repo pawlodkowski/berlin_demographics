@@ -1,10 +1,9 @@
-
-import pandas as pd
-import numpy as np
-from fuzzywuzzy import process
-import webbrowser
 import json
+import webbrowser
+
 import folium
+import pandas as pd
+from fuzzywuzzy import process
 
 SOURCE_FILE = 'data/EWRMIGRA201712H_Matrix.csv'
 CHROME_PATH = 'open -a /Applications/Google\ Chrome.app %s'
