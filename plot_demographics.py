@@ -137,4 +137,4 @@ def main(source, dem_group):
 
 if __name__ == '__main__':
 
-    main(SOURCE_FILE, '%Poland')
+    main(SOURCE_FILE, '%Form. USSR')
