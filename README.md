@@ -63,3 +63,21 @@ For names that aren't spelled exactly the same in both files (e.g. Brunnenstr. N
 `Sources:`
 - https://www.stadtentwicklung.berlin.de/planen/basisdaten_stadtentwicklung/lor/ (for naming key)
 - https://data.technologiestiftung-berlin.de (for GeoJSON file)
+
+# How to run the script
+
+1. Clone the repository `git clone https://github.com/pawlodkowski/berlin_demographics.git`
+
+2. Go into the folder `cd berlin_demographics`
+
+3. Install requirements `pip install -r requirements.txt`
+
+4. Run `python plot_demographics.py`, follow the command-line instructions.
+
+## TO-DO:
+
+- Replace the command-line-interface with a web-interface (e.g. Flask)
+- Allow user to plot data for different years.
+- Check data quality (the values for some bezirksregionen seem questionable.)
+- Allow script to run for different web browsers
+ besides Chrome (for automatically opening the HTML file.)
