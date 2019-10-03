@@ -1,25 +1,16 @@
 import json
+import string
 import webbrowser
 
 import folium
 import pandas as pd
 from fuzzywuzzy import process
 
-SOURCE_FILE = 'data/EWRMIGRA201712H_Matrix.csv'
-CHROME_PATH = 'open -a /Applications/Google\ Chrome.app %s'
+from config import CONFIG
 
-LOR_KEY = 'data/LOR-Schluesselsystematik.xls'
-#filefrom Berlin govt website to translate numbers to meaningful location names
-KEY_COLS = ['BEZ', 'Bezirk', 'PGR', 'Prognoseraum',
-               'BZR', 'Bezirksregion', 'PLR', 'Planungsraum']
-NUM_SHEETS = len(pd.ExcelFile(LOR_KEY).sheet_names)
+NUM_SHEETS = len(pd.ExcelFile(CONFIG['LOR_KEY']).sheet_names)
 
-OLD_COLS = ['HK_EU15', 'HK_EU28', 'HK_Polen', 'HK_EheJug', 'HK_EheSU',
-            'HK_Turk', 'HK_Arab', 'HK_Sonst', 'HK_NZOrd']
-NEW_COLS = ['%EU15', '%EU28', '%Poland', '%Form. Yug.',
-            '%Form. USSR', '%Turk', '%Arab', '%Other', '%Unclassified']
-
-with open('data/LOR-Bezirksregionen.geojson') as f:
+with open(CONFIG['GEO_JSON']) as f:
     gj = json.load(f)
 BEZIRKSREGIONEN = [f['properties']['BZRNAME']for f in gj['features']]
 
@@ -66,26 +57,30 @@ def standardize_names(df):
 
 def gen_migration_data(source):
 
+    """
+    From the Excel and CSV file, generate a combined DataFrame needed
+    for analyzing geographic distribution of various ethic groups /
+    nationalities across Berlin's neighborhoods.
+    """
+
     print('Contructing dataframe from Excel and CSV files...')
 
     df = pd.read_csv(source, sep=';')
 
     df_list = []
     for sheet in range(1, NUM_SHEETS):
-        key_xls = pd.read_excel(LOR_KEY,
-                                sheet_name = sheet,
-                                skiprows = 3,
-                                usecols = "B:C, E:F, H:I, K:L",
-                                names = KEY_COLS).fillna(method='ffill')
+        key_xls = pd.read_excel(CONFIG['LOR_KEY'],
+                                sheet_name=sheet,
+                                skiprows=3,
+                                usecols="B:C, E:F, H:I, K:L",
+                                names=CONFIG['KEY_COLS']).fillna(method='ffill')
         df_list.append(key_xls)
 
     merged_key = pd.concat(df_list)
-
     merged_df = df.merge(merged_key, how='inner')
-    #combine/merge data with the key, in order to map demographic groups to location
-    merged_df.set_index('RAUMID', inplace = True)
+    merged_df.set_index('RAUMID', inplace=True)
 
-    for new, old in zip(NEW_COLS, OLD_COLS):
+    for new, old in zip(CONFIG['NEW_COLS'], CONFIG['OLD_COLS']):
         merged_df[f'{new}'] = round((merged_df[f'{old}']/merged_df['MH_E'])*100, 2)
 
     return merged_df
@@ -101,9 +96,9 @@ def generate_map(df, dem_group):
     automatically in Google Chrome.
     """
 
-    print('Generating map...')
+    print('Generating map...\n')
 
-    plot_cols = ['Bezirksregion', '%EU15','%EU28',
+    plot_cols = ['Bezirksregion', '%EU15', '%EU28',
                  '%Poland', '%Form. Yug.', '%Form. USSR',
                  '%Turk', '%Arab', '%Other', '%Unclassified']
     df_avg = df[plot_cols].copy().groupby('Bezirksregion').mean().reset_index()
@@ -113,7 +108,7 @@ def generate_map(df, dem_group):
                         tiles='CartoDB positron')
 
     folium.Choropleth(
-        geo_data='data/LOR-Bezirksregionen.geojson',
+        geo_data=CONFIG['GEO_JSON'],
         name='chloropleth',
         data=df_avg, #actual data to be displayed
         columns=['Bezirksregion', f'{dem_group}'],
@@ -126,8 +121,8 @@ def generate_map(df, dem_group):
         highlight=True).add_to(bzrmap)
 
     folium.LayerControl().add_to(bzrmap)
-    bzrmap.save('results/demo_map.html')
-    webbrowser.get(CHROME_PATH).open('results/demo_map.html')
+    bzrmap.save('results/map.html')
+    webbrowser.get(CONFIG['CHROME_PATH']).open('results/map.html')
 
 def main(source, dem_group):
     """Primary function to wrap all previous functions"""
@@ -137,4 +132,20 @@ def main(source, dem_group):
 
 if __name__ == '__main__':
 
-    main(SOURCE_FILE, '%Form. USSR')
+    prompt = '''
+    From the following options, please select the letter corresponding to the
+    ethnic group / geographic region for which you'd like to generate a map.\n
+    '''
+
+    print(prompt)
+
+    letters = list(string.ascii_uppercase)
+    letters = letters[:len(CONFIG['CLI_OPTIONS'])]
+
+    for let, opt in zip(letters, CONFIG['CLI_OPTIONS']):
+        print(f'{let}. {opt}')
+
+    choice = input('\n\nEnter letter (no punctuation): ')
+    choice = dict(zip(letters, CONFIG['NEW_COLS']))[choice.upper()]
+
+    main(CONFIG['SOURCE_FILE'], choice)
