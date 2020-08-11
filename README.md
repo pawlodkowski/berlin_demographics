@@ -79,5 +79,3 @@ For names that aren't spelled exactly the same in both files (e.g. Brunnenstr. N
 - Replace the command-line-interface with a web-interface (e.g. Flask)
 - Allow user to plot data for different years.
 - Check data quality (the values for some bezirksregionen seem questionable.)
-- Allow script to run for different web browsers
- besides Chrome (for automatically opening the HTML file.)

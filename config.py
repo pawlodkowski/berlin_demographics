@@ -1,6 +1,5 @@
 CONFIG = {
           'SOURCE_FILE' : 'data/EWRMIGRA201712H_Matrix.csv',
-          'CHROME_PATH' : 'open -a /Applications/Google\ Chrome.app %s',
           'LOR_KEY' : 'data/LOR-Schluesselsystematik.xls',
           'GEO_JSON' : 'data/LOR-Bezirksregionen.geojson',
           'KEY_COLS' : ['BEZ', 'Bezirk', 'PGR', 'Prognoseraum',

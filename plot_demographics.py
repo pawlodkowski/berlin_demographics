@@ -1,6 +1,7 @@
 import json
 import string
 import webbrowser
+import os
 
 import folium
 import pandas as pd
@@ -9,6 +10,7 @@ from fuzzywuzzy import process
 from config import CONFIG
 
 NUM_SHEETS = len(pd.ExcelFile(CONFIG['LOR_KEY']).sheet_names)
+SAVE_FILE_NAME = 'results.html'
 
 with open(CONFIG['GEO_JSON']) as f:
     gj = json.load(f)
@@ -121,8 +123,9 @@ def generate_map(df, dem_group):
         highlight=True).add_to(bzrmap)
 
     folium.LayerControl().add_to(bzrmap)
-    bzrmap.save('results/map.html')
-    webbrowser.get(CONFIG['CHROME_PATH']).open('results/map.html')
+    bzrmap.save(SAVE_FILE_NAME)
+    webbrowser.open('file://' + os.path.realpath(SAVE_FILE_NAME))
+    print(f'HTML file generated and saved: {SAVE_FILE_NAME}')
 
 def main(source, dem_group):
     """Primary function to wrap all previous functions"""
