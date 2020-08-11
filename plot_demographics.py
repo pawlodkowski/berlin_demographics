@@ -1,20 +1,21 @@
 import json
+import os
 import string
 import webbrowser
-import os
 
-import folium
 import pandas as pd
 from fuzzywuzzy import process
 
+import folium
 from config import CONFIG
 
-NUM_SHEETS = len(pd.ExcelFile(CONFIG['LOR_KEY']).sheet_names)
-SAVE_FILE_NAME = 'results.html'
+NUM_SHEETS = len(pd.ExcelFile(CONFIG["LOR_KEY"]).sheet_names)
+SAVE_FILE_NAME = "results.html"
 
-with open(CONFIG['GEO_JSON']) as f:
+with open(CONFIG["GEO_JSON"]) as f:
     gj = json.load(f)
-BEZIRKSREGIONEN = [f['properties']['BZRNAME']for f in gj['features']]
+BEZIRKSREGIONEN = [f["properties"]["BZRNAME"] for f in gj["features"]]
+
 
 def get_closest_name(s):
     """Takes bezirksregion name from the original excel file
@@ -36,6 +37,7 @@ def get_closest_name(s):
     match = process.extractOne(s, BEZIRKSREGIONEN)
     return match[0]
 
+
 def standardize_names(df):
     """
     Using the pre-defined function, get_closest_name,
@@ -45,17 +47,18 @@ def standardize_names(df):
     on the choropleth map.
     """
 
-    print('Standardizing Bezirkregion names...')
+    print("Standardizing Bezirkregion names...")
     bzr_matches = []
-    for bzr in df['Bezirksregion'].values:
+    for bzr in df["Bezirksregion"].values:
         if bzr not in BEZIRKSREGIONEN:
             match = get_closest_name(bzr)
             bzr_matches.append(match)
         else:
             bzr_matches.append(bzr)
-    df['Bezirksregion'] = bzr_matches
+    df["Bezirksregion"] = bzr_matches
 
     return df
+
 
 def gen_migration_data(source):
 
@@ -65,27 +68,30 @@ def gen_migration_data(source):
     nationalities across Berlin's neighborhoods.
     """
 
-    print('Contructing dataframe from Excel and CSV files...')
+    print("Contructing dataframe from Excel and CSV files...")
 
-    df = pd.read_csv(source, sep=';')
+    df = pd.read_csv(source, sep=";")
 
     df_list = []
     for sheet in range(1, NUM_SHEETS):
-        key_xls = pd.read_excel(CONFIG['LOR_KEY'],
-                                sheet_name=sheet,
-                                skiprows=3,
-                                usecols="B:C, E:F, H:I, K:L",
-                                names=CONFIG['KEY_COLS']).fillna(method='ffill')
+        key_xls = pd.read_excel(
+            CONFIG["LOR_KEY"],
+            sheet_name=sheet,
+            skiprows=3,
+            usecols="B:C, E:F, H:I, K:L",
+            names=CONFIG["KEY_COLS"],
+        ).fillna(method="ffill")
         df_list.append(key_xls)
 
     merged_key = pd.concat(df_list)
-    merged_df = df.merge(merged_key, how='inner')
-    merged_df.set_index('RAUMID', inplace=True)
+    merged_df = df.merge(merged_key, how="inner")
+    merged_df.set_index("RAUMID", inplace=True)
 
-    for new, old in zip(CONFIG['NEW_COLS'], CONFIG['OLD_COLS']):
-        merged_df[f'{new}'] = round((merged_df[f'{old}']/merged_df['MH_E'])*100, 2)
+    for new, old in zip(CONFIG["NEW_COLS"], CONFIG["OLD_COLS"]):
+        merged_df[f"{new}"] = round((merged_df[f"{old}"] / merged_df["MH_E"]) * 100, 2)
 
     return merged_df
+
 
 def generate_map(df, dem_group):
     """
@@ -98,34 +104,45 @@ def generate_map(df, dem_group):
     automatically in Google Chrome.
     """
 
-    print('Generating map...\n')
+    print("Generating map...\n")
 
-    plot_cols = ['Bezirksregion', '%EU15', '%EU28',
-                 '%Poland', '%Form. Yug.', '%Form. USSR',
-                 '%Turk', '%Arab', '%Other', '%Unclassified']
-    df_avg = df[plot_cols].copy().groupby('Bezirksregion').mean().reset_index()
+    plot_cols = [
+        "Bezirksregion",
+        "%EU15",
+        "%EU28",
+        "%Poland",
+        "%Form. Yug.",
+        "%Form. USSR",
+        "%Turk",
+        "%Arab",
+        "%Other",
+        "%Unclassified",
+    ]
+    df_avg = df[plot_cols].copy().groupby("Bezirksregion").mean().reset_index()
 
-    bzrmap = folium.Map(location=[52.54, 13.36],
-                        zoom_start=10,
-                        tiles='CartoDB positron')
+    bzrmap = folium.Map(
+        location=[52.54, 13.36], zoom_start=10, tiles="CartoDB positron"
+    )
 
     folium.Choropleth(
-        geo_data=CONFIG['GEO_JSON'],
-        name='chloropleth',
-        data=df_avg, #actual data to be displayed
-        columns=['Bezirksregion', f'{dem_group}'],
-        key_on='properties.Name',
-        fill_color='YlOrRd',
-        nan_fill_color='#ededed',
+        geo_data=CONFIG["GEO_JSON"],
+        name="chloropleth",
+        data=df_avg,  # actual data to be displayed
+        columns=["Bezirksregion", f"{dem_group}"],
+        key_on="properties.Name",
+        fill_color="YlOrRd",
+        nan_fill_color="#ededed",
         fill_opacity=0.7,
         line_opacity=0.2,
-        legend_name=f'{dem_group}',
-        highlight=True).add_to(bzrmap)
+        legend_name=f"{dem_group}",
+        highlight=True,
+    ).add_to(bzrmap)
 
     folium.LayerControl().add_to(bzrmap)
     bzrmap.save(SAVE_FILE_NAME)
-    webbrowser.open('file://' + os.path.realpath(SAVE_FILE_NAME))
-    print(f'HTML file generated and saved: {SAVE_FILE_NAME}')
+    webbrowser.open("file://" + os.path.realpath(SAVE_FILE_NAME))
+    print(f"HTML file generated and saved: {SAVE_FILE_NAME}")
+
 
 def main(source, dem_group):
     """Primary function to wrap all previous functions"""
@@ -133,22 +150,23 @@ def main(source, dem_group):
     df = standardize_names(df)
     generate_map(df, dem_group)
 
-if __name__ == '__main__':
 
-    prompt = '''
+if __name__ == "__main__":
+
+    prompt = """
     From the following options, please select the letter corresponding to the
     ethnic group / geographic region for which you'd like to generate a map.\n
-    '''
+    """
 
     print(prompt)
 
     letters = list(string.ascii_uppercase)
-    letters = letters[:len(CONFIG['CLI_OPTIONS'])]
+    letters = letters[: len(CONFIG["CLI_OPTIONS"])]
 
-    for let, opt in zip(letters, CONFIG['CLI_OPTIONS']):
-        print(f'{let}. {opt}')
+    for let, opt in zip(letters, CONFIG["CLI_OPTIONS"]):
+        print(f"{let}. {opt}")
 
-    choice = input('\n\nEnter letter (no punctuation): ')
-    choice = dict(zip(letters, CONFIG['NEW_COLS']))[choice.upper()]
+    choice = input("\n\nEnter letter (no punctuation): ")
+    choice = dict(zip(letters, CONFIG["NEW_COLS"]))[choice.upper()]
 
-    main(CONFIG['SOURCE_FILE'], choice)
+    main(CONFIG["SOURCE_FILE"], choice)
